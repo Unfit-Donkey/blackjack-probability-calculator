@@ -2,13 +2,129 @@
 //2021
 //Blackjack probability calculator
 #include <iostream>
+#include <cstdlib>
 
 using namespace std;
+const int cardValues[] = { 0,11,2,3,4,5,6,7,8,9,10,10,10,10 };
+const char cardNames[] = { '?','A','2','3','4','5','6','7','8','9','T','J','Q','K' };
+int deckCount;
+int playerCount = 0;
+int playerPosition = 0;
 
+int* deck;
+void getGameState() {
+    cout << "Enter deck count: ";
+    cin >> deckCount;
+    //cout << "Enter player count: ";
+    //cin >> playerCount;
+    //cout << "Enter player position: ";
+    //cin >> playerPosition;
+}
+int drawCard(int* deck, int* deckSize) {
+    int index = rand() % *deckSize;
+    int value = deck[index];
+    deck[index] = deck[*deckSize - 1];
+    (*deckSize)--;
+    return value;
+}
+int aceCount(int* hand, int count) {
+    int total = 0;
+    for(int i = 0;i < count;i++) {
+        if(hand[i] == 1) total++;
+    }
+    return total;
+}
+int printHandAndTotal(int* hand, int count) {
+    int total = 0;
+    int aceCount = 0;
+    for(int i = 0;i < count;i++) {
+        cout << cardNames[hand[i]];
+        if(i != count - 1) cout << ", ";
+        total += cardValues[hand[i]];
+        if(hand[i] == 1) aceCount++;
+    }
+    //Lower ace values if over 21
+    while(aceCount > 0 && total > 21) {
+        total -= 10;
+        aceCount--;
+    }
+    return total;
+}
 int main(void) {
-    cout << "Blackjack simulator $0.99";
-
-
-
+    srand(time(0));
+    cout << "Blackjack simulator $0.99" << endl;
+    getGameState();
+    int cardCount = deckCount * 52;
+    int deck[cardCount];
+    for(int i = 0;i < cardCount;i++) {
+        deck[i] = (i / 4) % 13 + 1;
+    }
+    //Player's cards
+    int playerCards[10];
+    int playerHandSize = 1;
+    playerCards[0] = drawCard(deck, &cardCount);
+    //Dealer's cards
+    int dealerCards[10];
+    int dealerHandSize = 2;
+    dealerCards[0] = drawCard(deck, &cardCount);
+    dealerCards[1] = drawCard(deck, &cardCount);
+    //Print out dealer's card
+    cout << "Dealer is showing: " << cardNames[dealerCards[0]] << endl;
+    //Prompt for hits
+    char hit = 'y';
+    int playerTotal=0;
+    int dealerTotal=0;
+    while(hit == 'y' || hit == 'Y') {
+        //Draw card
+        playerCards[playerHandSize] = drawCard(deck, &cardCount);
+        playerHandSize++;
+        //Print and count cards
+        cout << "Your cards right now: ";
+        playerTotal = printHandAndTotal(playerCards, playerHandSize);
+        cout << endl;
+        int aceCount = 0;
+        for(int i = 0;i < playerHandSize;i++) if(playerCards[i] == 1) aceCount++;
+        //Busting
+        if(playerTotal > 21) {
+            cout << "You busted (total=" << playerTotal << ")" << endl;
+            break;
+        }
+        //Natural 21
+        if(playerTotal == 21 && playerHandSize == 2) {
+            cout << "You hit a natural 21" << endl;
+            break;
+        }
+        else cout << "Total count: " << playerTotal << endl;
+        cout << "Would you like to hit? (y, n) ";
+        cin >> hit;
+    }
+    cout << "Dealer's cards: ";
+    dealerTotal = printHandAndTotal(dealerCards, dealerHandSize);
+    cout << endl << "Dealer total: " << dealerTotal << endl;
+    int dealerAces = aceCount(dealerCards, dealerHandSize);
+    while(dealerTotal < 17 || (dealerTotal == 17 && dealerAces != 0)) {
+        //Draw card
+        dealerCards[dealerHandSize] = drawCard(deck, &cardCount);
+        //Print cards
+        dealerHandSize++;
+        cout << "Dealer's hand: ";
+        dealerTotal = printHandAndTotal(dealerCards, dealerHandSize);
+        cout << endl << "Dealer total: " << dealerTotal << endl;
+        dealerAces = aceCount(dealerCards, dealerHandSize);
+    }
+    cout << "Player total: " << playerTotal << endl;
+    if(playerTotal>21) {
+        cout << "Player busts. Dealer wins" << endl;
+    }
+    else if(dealerTotal>21) {
+        cout << "Dealer busts. Player wins" << endl;
+    }
+    else if(playerTotal>dealerTotal) {
+        cout << "Player wins" << endl;
+    }
+    else if(playerTotal==dealerTotal) {
+        cout << "Player pushes" << endl;
+    }
+    else cout << "Dealer wins" << endl;
     return 0;
 }
