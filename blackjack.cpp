@@ -54,24 +54,16 @@ int totalHand(int* hand, int count) {
     }
     return total;
 }
-int main(void) {
-    srand(time(0));
-    cout << "Blackjack simulator $0.99" << endl;
-    getGameState();
-    int cardCount = deckCount * 52;
-    int deck[cardCount];
-    for(int i = 0;i < cardCount;i++) {
-        deck[i] = (i / 4) % 13 + 1;
-    }
+void runRound(int* deck, int* cardCountReference) {
     //Player's cards
     int playerHand[10];
     int playerHandSize = 1;
-    playerHand[0] = drawCard(deck, &cardCount);
+    playerHand[0] = drawCard(deck, cardCountReference);
     //Dealer's cards
     int dealerCards[10];
     int dealerHandSize = 2;
-    dealerCards[0] = drawCard(deck, &cardCount);
-    dealerCards[1] = drawCard(deck, &cardCount);
+    dealerCards[0] = drawCard(deck, cardCountReference);
+    dealerCards[1] = drawCard(deck, cardCountReference);
     //Print out dealer's card
     cout << "Dealer is showing: " << cardNames[dealerCards[0]] << endl;
     //Prompt for hits
@@ -80,15 +72,13 @@ int main(void) {
     int dealerTotal = 0;
     while(hit == 'y' || hit == 'Y') {
         //Draw card
-        playerHand[playerHandSize] = drawCard(deck, &cardCount);
+        playerHand[playerHandSize] = drawCard(deck, cardCountReference);
         playerHandSize++;
         //Print and count cards
         cout << "Your cards right now: ";
         printHand(playerHand, playerHandSize);
-        playerTotal = totalHand(playerHand, playerHandSize);
         cout << endl;
-        int aceCount = 0;
-        for(int i = 0;i < playerHandSize;i++) if(playerHand[i] == 1) aceCount++;
+        playerTotal = totalHand(playerHand, playerHandSize);
         //Busting
         if(playerTotal > 21) {
             cout << "You busted (total=" << playerTotal << ")" << endl;
@@ -110,28 +100,36 @@ int main(void) {
     int dealerAces = aceCount(dealerCards, dealerHandSize);
     while(dealerTotal < 17 || (dealerTotal == 17 && dealerAces != 0)) {
         //Draw card
-        dealerCards[dealerHandSize] = drawCard(deck, &cardCount);
+        dealerCards[dealerHandSize] = drawCard(deck, cardCountReference);
         //Print cards
         dealerHandSize++;
         cout << "Dealer's hand: ";
         printHand(dealerCards, dealerHandSize);
         dealerTotal = totalHand(dealerCards, dealerHandSize);
+        //Print total
         cout << endl << "Dealer total: " << dealerTotal << endl;
         dealerAces = aceCount(dealerCards, dealerHandSize);
     }
     cout << "Player total: " << playerTotal << endl;
-    if(playerTotal > 21) {
-        cout << "Player busts. Dealer wins" << endl;
-    }
-    else if(dealerTotal > 21) {
-        cout << "Dealer busts. Player wins" << endl;
-    }
-    else if(playerTotal > dealerTotal) {
-        cout << "Player wins" << endl;
-    }
-    else if(playerTotal == dealerTotal) {
-        cout << "Player pushes" << endl;
-    }
+    //Player busts
+    if(playerTotal > 21) cout << "Player busts. Dealer wins" << endl;
+    //Dealer busts
+    else if(dealerTotal > 21) cout << "Dealer busts. Player wins" << endl;
+    //Player wins
+    else if(playerTotal > dealerTotal) cout << "Player wins" << endl;
+    //Dealer wins
+    else if(playerTotal == dealerTotal) cout << "Player pushes" << endl;
     else cout << "Dealer wins" << endl;
+}
+int main(void) {
+    srand(time(0));
+    cout << "Blackjack simulator $0.99" << endl;
+    getGameState();
+    int cardCount = deckCount * 52;
+    int deck[cardCount];
+    for(int i = 0;i < cardCount;i++) {
+        deck[i] = (i / 4) % 13 + 1;
+    }
+    runRound(deck,&cardCount);
     return 0;
 }
