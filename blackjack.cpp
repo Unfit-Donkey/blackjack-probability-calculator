@@ -1,4 +1,4 @@
-//Benjamin Cates, Damaris Sanchez, Suhkman Kaur, and Professor David Jones
+//Benjamin Cates, Damaris Sanchez, Sukhman Kaur, and Professor David Jones
 //2021
 //Blackjack probability calculator
 #include <iostream>
