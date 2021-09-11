@@ -54,6 +54,11 @@ int totalHand(int* hand, int count) {
     }
     return total;
 }
+void generateDeck(int* deck,int count) {
+    for(int i = 0;i < count;i++) {
+        deck[i] = (i / 4) % 13 + 1;
+    }
+}
 void runRound(int* deck, int* cardCountReference) {
     //Player's cards
     int playerHand[10];
@@ -127,9 +132,7 @@ int main(void) {
     getGameState();
     int cardCount = deckCount * 52;
     int deck[cardCount];
-    for(int i = 0;i < cardCount;i++) {
-        deck[i] = (i / 4) % 13 + 1;
-    }
+    generateDeck(deck,cardCount);
     runRound(deck,&cardCount);
     return 0;
 }
