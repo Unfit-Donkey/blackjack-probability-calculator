@@ -34,12 +34,16 @@ int aceCount(int* hand, int count) {
     }
     return total;
 }
-int printHandAndTotal(int* hand, int count) {
-    int total = 0;
-    int aceCount = 0;
+void printHand(int* hand, int count) {
     for(int i = 0;i < count;i++) {
         cout << cardNames[hand[i]];
         if(i != count - 1) cout << ", ";
+    }
+}
+int totalHand(int* hand, int count) {
+    int total = 0;
+    int aceCount = 0;
+    for(int i = 0;i < count;i++) {
         total += cardValues[hand[i]];
         if(hand[i] == 1) aceCount++;
     }
@@ -60,9 +64,9 @@ int main(void) {
         deck[i] = (i / 4) % 13 + 1;
     }
     //Player's cards
-    int playerCards[10];
+    int playerHand[10];
     int playerHandSize = 1;
-    playerCards[0] = drawCard(deck, &cardCount);
+    playerHand[0] = drawCard(deck, &cardCount);
     //Dealer's cards
     int dealerCards[10];
     int dealerHandSize = 2;
@@ -72,18 +76,19 @@ int main(void) {
     cout << "Dealer is showing: " << cardNames[dealerCards[0]] << endl;
     //Prompt for hits
     char hit = 'y';
-    int playerTotal=0;
-    int dealerTotal=0;
+    int playerTotal = 0;
+    int dealerTotal = 0;
     while(hit == 'y' || hit == 'Y') {
         //Draw card
-        playerCards[playerHandSize] = drawCard(deck, &cardCount);
+        playerHand[playerHandSize] = drawCard(deck, &cardCount);
         playerHandSize++;
         //Print and count cards
         cout << "Your cards right now: ";
-        playerTotal = printHandAndTotal(playerCards, playerHandSize);
+        printHand(playerHand, playerHandSize);
+        playerTotal = totalHand(playerHand, playerHandSize);
         cout << endl;
         int aceCount = 0;
-        for(int i = 0;i < playerHandSize;i++) if(playerCards[i] == 1) aceCount++;
+        for(int i = 0;i < playerHandSize;i++) if(playerHand[i] == 1) aceCount++;
         //Busting
         if(playerTotal > 21) {
             cout << "You busted (total=" << playerTotal << ")" << endl;
@@ -99,7 +104,8 @@ int main(void) {
         cin >> hit;
     }
     cout << "Dealer's cards: ";
-    dealerTotal = printHandAndTotal(dealerCards, dealerHandSize);
+    printHand(dealerCards, dealerHandSize);
+    dealerTotal = totalHand(dealerCards, dealerHandSize);
     cout << endl << "Dealer total: " << dealerTotal << endl;
     int dealerAces = aceCount(dealerCards, dealerHandSize);
     while(dealerTotal < 17 || (dealerTotal == 17 && dealerAces != 0)) {
@@ -108,21 +114,22 @@ int main(void) {
         //Print cards
         dealerHandSize++;
         cout << "Dealer's hand: ";
-        dealerTotal = printHandAndTotal(dealerCards, dealerHandSize);
+        printHand(dealerCards, dealerHandSize);
+        dealerTotal = totalHand(dealerCards, dealerHandSize);
         cout << endl << "Dealer total: " << dealerTotal << endl;
         dealerAces = aceCount(dealerCards, dealerHandSize);
     }
     cout << "Player total: " << playerTotal << endl;
-    if(playerTotal>21) {
+    if(playerTotal > 21) {
         cout << "Player busts. Dealer wins" << endl;
     }
-    else if(dealerTotal>21) {
+    else if(dealerTotal > 21) {
         cout << "Dealer busts. Player wins" << endl;
     }
-    else if(playerTotal>dealerTotal) {
+    else if(playerTotal > dealerTotal) {
         cout << "Player wins" << endl;
     }
-    else if(playerTotal==dealerTotal) {
+    else if(playerTotal == dealerTotal) {
         cout << "Player pushes" << endl;
     }
     else cout << "Dealer wins" << endl;
