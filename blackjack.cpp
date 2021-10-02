@@ -19,16 +19,19 @@ const string cardNames[] = {
     "Ah","2h","3h","4h","5h","6h","7h","8h","9h","Th","Jh","Qh","Kh",
     "Ac","2c","3c","4c","5c","6c","7c","8c","9c","Tc","Jc","Qc","Kc" };
 int deckCount;
+int deckSize;
+int* deckSizeReference = &deckSize;
 int playerCount = 0;
 int playerPosition = 0;
 int bankRoll = 10000;
-int wager=50;
+int wager = 50;
 int runningCount = 0;
+int roundCount = 1;
 
 
 int* deck;
 void getGameState() {
-   // cout << "Enter deck count: ";
+    // cout << "Enter deck count: ";
     deckCount = 1;
     //cin >> deckCount;
     //cout << "Enter player count: ";
@@ -38,148 +41,185 @@ void getGameState() {
 }
 int runningCounter(int cardID) {
     int temp = cardValues[cardID];
-    if (temp >= 2 && temp <= 6) return 1;
-    else if (temp == 10 && temp == 11) return -1;
+    if(temp >= 2 && temp <= 6) return 1;
+    else if(temp == 10 || temp == 11) return -1;
     else return 0;
-    }
-int drawCard(int* deck, int* deckSize) {
-    int index = rand() % *deckSize;
+}
+int drawCard() {
+    int index = rand() % deckSize;
     int cardID = deck[index];
     runningCount += runningCounter(cardID);
-    deck[index] = deck[*deckSize - 1];
-    (*deckSize)--;
+    deckSize--;
+    deck[index] = deck[deckSize];
     return cardID;
 }
 int aceCount(int* hand, int count) {
     int total = 0;
-    for (int i = 0;i < count;i++) {
-        if (cardValues[hand[i]] == 11) total++;
+    for(int i = 0;i < count;i++) {
+        if(cardValues[hand[i]] == 11) total++;
     }
     return total;
 }
 void printHand(int* hand, int count) {
-    for (int i = 0;i < count;i++) {
+    for(int i = 0;i < count;i++) {
         cout << cardNames[hand[i]];
-        if (i != count - 1) cout << ", ";
+        if(i != count - 1) cout << ", ";
     }
 }
 int totalHand(int* hand, int count) {
     int total = 0;
     int aceCount = 0;
-    for (int i = 0;i < count;i++) {
+    for(int i = 0;i < count;i++) {
         total += cardValues[hand[i]];
-        if (cardValues[hand[i]] == 11) aceCount++;
+        if(cardValues[hand[i]] == 11) aceCount++;
     }
     //Lower ace values if over 21
-    while (aceCount > 0 && total > 21) {
+    while(aceCount > 0 && total > 21) {
         total -= 10;
         aceCount--;
     }
     return total;
 }
 void generateDeck(int* deck, int count) {
-    for (int i = 0;i < count;i++) {
+    for(int i = 0;i < count;i++) {
         deck[i] = i + 1;
     }
 }
-void runRound(int* deck, int* cardCountReference) {
-    //Player's cards
-    cout << "How much would you like to wager this round? : ";
-    cin >> wager;
-    while  (wager > bankRoll || wager < 0) {
-        if (wager > bankRoll) {
-            cout << "You don't have that much money.  Bet a lower amount: ";
-            cin >> wager;
-        }
-        else {
-            cout << "You can't bet negative money.  Bet a real amount: ";
-            cin >> wager;
-        }
+int playHand(int* hand, int* handSizeReference) {
+    char hit = 'h';
+    int total;
+    while(hit == 'h' || hit == 'H') {
+        cout << "\n[card count: " << runningCount << "] Hit, stand, or double down? (h s d) ";
+        cin >> hit;
+        if(hit == 's' || hit == 'S') break;
+        if(hit == 'd' || hit == 'D') wager *= 2;
+        //Draw card
+        hand[*handSizeReference] = drawCard();
+        (*handSizeReference)++;
+        //Print and count cards
+        total = totalHand(hand, *handSizeReference);
+        cout << "Your cards right now (" << total << "): ";
+        printHand(hand, *handSizeReference);
+        cout << endl;
+        //Busting
+        if(total >= 21) break;
     }
-
-
-    char hit = 'y';
+    return total;
+}
+int payoutResults(int player, int dealer) {
+    if(player > 21) {
+        bankRoll = bankRoll - wager;
+        cout << "Player busts. Dealer wins" << endl;
+        return -1;
+    }
+    if(dealer > 21) {
+        bankRoll = bankRoll + wager;
+        cout << "Dealer busts. Player wins" << endl;
+        return 1;
+    }
+    if(player > dealer) {
+        cout << "Player wins" << endl;
+        bankRoll = bankRoll + wager;
+        return 1;
+    }
+    if(player == dealer) {
+        cout << "Player pushes" << endl;
+        return 0;
+    }
+    //Dealer wins
+    bankRoll = bankRoll - wager;
+    cout << "Dealer wins" << endl;
+    return -1;
+}
+bool runRound() {
+    //Player's cards
+    cout << "------------- round " << roundCount << " -------------" << endl << endl;
+    cout << "What is your wager? (0 to quit): ";
+    cin >> wager;
+    if(wager <= 0) return false;
+    while(wager > bankRoll) {
+        cout << "You don't have that much money.  Bet a lower amount: ";
+        cin >> wager;
+    }
+    char hit = 'h';
     int playerTotal = 0;
     int dealerTotal = 0;
     int playerHand[10];
-    int playerHandSize = 1;
-    playerHand[0] = drawCard(deck, cardCountReference);
+    int playerHandSize = 2;
+    playerHand[0] = drawCard();
+    playerHand[1] = drawCard();
     //Dealer's cards
     int dealerCards[10];
     int dealerHandSize = 2;
-    dealerCards[0] = drawCard(deck, cardCountReference);
-    dealerCards[1] = drawCard(deck, cardCountReference);
+    dealerCards[0] = drawCard();
+    dealerCards[1] = drawCard();
     runningCount -= runningCounter(dealerCards[1]);
     //Print out dealer's card
     cout << "Dealer is showing: " << cardNames[dealerCards[0]] << endl;
-    //Prompt for hits
-
-    while (hit == 'y' || hit == 'Y') {
-        //Draw card
-        playerHand[playerHandSize] = drawCard(deck, cardCountReference);
-        playerHandSize++;
-        //Print and count cards
-        cout << "Your cards right now: ";
-        printHand(playerHand, playerHandSize);
-        cout << "\nThe current card count is : " << runningCount<< endl;
-        playerTotal = totalHand(playerHand, playerHandSize);
-        //Busting
-        if (playerTotal > 21) {
-            cout << "You busted (total=" << playerTotal << ")" << endl;
-
-            break;
+    //Print and count cards
+    playerTotal = totalHand(playerHand, playerHandSize);
+    cout << "Current hand (" << playerTotal << "): ";
+    printHand(playerHand, playerHandSize);
+    //Splitting opportunity
+    int secondHand[10];
+    int secondHandSize = 0;
+    int secondHandTotal = 0;
+    char split;
+    if(playerHand[0] % 13 == playerHand[1] % 13) {
+        cout << "\n\nWould you like to split? (y or n): ";
+        cin >> split;
+        if(split == 'y' || split == 'Y') {
+            playerHandSize--;
+            secondHand[0] = playerHand[1];
+            secondHandSize = 1;
+            cout << "---- Playing first hand ----" << endl;
+            cout << "Current hand (" << cardValues[secondHand[0]] << "): ";
+            printHand(secondHand, secondHandSize);
+            secondHandTotal = playHand(secondHand, &secondHandSize);
+            cout << "---- Playing second hand ----" << endl;
+            cout << "Current hand (" << cardValues[playerHand[0]] << "): ";
+            printHand(playerHand, playerHandSize);
         }
-        //Natural 21
-        if (playerTotal == 21 && playerHandSize == 2) {
-            cout << "You hit a natural 21" << endl;
-            bankRoll = bankRoll + .5 * wager;
-            break;
-        }
-        else cout << "Total count: " << playerTotal << endl;
-        cout << "Would you like to hit? (y, n) ";
-        cin >> hit;
     }
-    cout << "Dealer's cards: ";
-    printHand(dealerCards, dealerHandSize);
+    //Natural 21
+    if(playerTotal == 21) {
+        cout << "\nYou hit a natural 21";
+        bankRoll = bankRoll + .5 * wager;
+    }
+    //Hit loop
+    else {
+        cout << endl;
+        playerTotal = playHand(playerHand, &playerHandSize);
+    }
     dealerTotal = totalHand(dealerCards, dealerHandSize);
-    cout << endl << "Dealer total: " << dealerTotal << endl;
     int dealerAces = aceCount(dealerCards, dealerHandSize);
-    while (dealerTotal < 17 || (dealerTotal == 17 && dealerAces != 0)) {
+    while(playerTotal <= 21 && secondHandTotal < 21 && (dealerTotal < 17 || (dealerTotal == 17 && dealerAces != 0))) {
         //Draw card
-        dealerCards[dealerHandSize] = drawCard(deck, cardCountReference);
-        //Print cards
+        dealerCards[dealerHandSize] = drawCard();
         dealerHandSize++;
-        cout << "Dealer's hand: ";
-        printHand(dealerCards, dealerHandSize);
+        //Print cards
+        //cout << "Dealer's hand: ";
+        //printHand(dealerCards, dealerHandSize);
         dealerTotal = totalHand(dealerCards, dealerHandSize);
         //Print total
-        cout << endl << "Dealer total: " << dealerTotal << endl;
+        //cout << endl << "Dealer total: " << dealerTotal << endl;
         dealerAces = aceCount(dealerCards, dealerHandSize);
     }
+    cout << endl << "Dealer's hand: ";
+    printHand(dealerCards, dealerHandSize);
+    dealerTotal = totalHand(dealerCards, dealerHandSize);
+    //Print total
+    cout << endl << "Dealer total: " << dealerTotal << endl;
+    dealerAces = aceCount(dealerCards, dealerHandSize);
     cout << "Player total: " << playerTotal << endl;
-    //Player busts
-    if (playerTotal > 21) {
-        bankRoll = bankRoll - wager;
-        cout << "Player busts. Dealer wins" << endl;
-    }
-    //Dealer busts
-    else if (dealerTotal > 21) {
-        bankRoll = bankRoll + wager;
-        cout << "Dealer busts. Player wins" << endl;
-    }
-    //Player wins
-    else if (playerTotal > dealerTotal) {
-        cout << "Player wins" << endl;
-        bankRoll = bankRoll + wager;
-    }
-    //Dealer wins
-    else if (playerTotal == dealerTotal) cout << "Player pushes" << endl;
-    else {
-        bankRoll = bankRoll - wager;
-        cout << "Dealer wins" << endl;
+    payoutResults(playerTotal, dealerTotal);
+    if(split == 'y' || split == 'Y') {
+        cout << "---Second hand payouts---" << endl << "Second hand total: " << secondHandTotal << endl;
+        payoutResults(secondHandTotal, dealerTotal);
     }
     runningCount += runningCounter(dealerCards[1]);
     cout << "Current bank roll is : " << bankRoll << endl;
+    return true;
 }
 int main(void) {
     srand(time(0));
@@ -188,27 +228,24 @@ int main(void) {
     getGameState();
     cout << "How much money are you starting with? ";
     cin >> bankRoll;
-    cout << endl << endl;
-    int cardCount = deckCount * 52;
-    int originalCardCount = cardCount;
-    int* deck = (int*)malloc(cardCount * sizeof(int));
-    generateDeck(deck, cardCount);
-    char again ='y';
-    while (again == 'Y' || again == 'y') {
-        runRound(deck, &cardCount);
-        if (bankRoll <= 0) {
+    cout << endl;
+    deckSize = deckCount * 52;
+    int originalDeckSize = deckSize;
+    deck = (int*)malloc(deckSize * sizeof(int));
+    generateDeck(deck, deckSize);
+    while(runRound()) {
+        roundCount++;
+        if(bankRoll <= 0) {
             cout << "You lose, chump.  You're out of money. The loan shark is comin!" << endl;
             return 0;
         }
         cout << endl;
-        if (cardCount < originalCardCount / 2) {
+        if(deckSize < originalDeckSize / 2) {
             runningCount = 0;
-            generateDeck(deck, originalCardCount);
-            cardCount = originalCardCount;
-            cout << "\n\nDeck reshuffled\n\n";
+            generateDeck(deck, originalDeckSize);
+            deckSize = originalDeckSize;
+            cout << "***************\nDeck reshuffled\n***************\n\n";
         }
-        cout << "Would you like to keep playing? Enter y or n: ";
-        cin >> again;
     }
     free(deck);
     return 0;
