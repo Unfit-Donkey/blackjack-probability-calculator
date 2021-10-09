@@ -5,6 +5,7 @@
 #include <string>
 #include <ctime>
 #include <cstdlib>
+#include <limits>
 
 using namespace std;
 const int cardValues[] = {
@@ -30,6 +31,23 @@ int roundCount = 1;
 
 
 int* deck;
+
+int promptForInt(const char* prompt, int min, int max) {
+    int out;
+    while(1) {
+        cout << prompt;
+        cin >> out;
+        if(cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input (expects integer)" << endl;
+            continue;
+        }
+        if(out > max) cout << "Input must be less than " << max + 1 << endl;
+        else if(out < min) cout << "Input must be greater than " << min - 1 << endl;
+        else return out;
+    }
+}
 void getGameState() {
     // cout << "Enter deck count: ";
     deckCount = 1;
@@ -88,7 +106,7 @@ void generateDeck(int* deck, int count) {
 int playHand(int* hand, int* handSizeReference) {
     char hit = 'h';
     int total = 0;
-    while(hit == 'h' || hit == 'H') {
+    while(true) {
         cout << "\n[card count: " << runningCount << "] Hit, stand, or double down? (h s d) ";
         cin >> hit;
         if(hit == 's' || hit == 'S') {
@@ -106,6 +124,7 @@ int playHand(int* hand, int* handSizeReference) {
         cout << endl;
         //Busting
         if(total >= 21) break;
+        if(hit == 'd' || hit == 'D') break;
     }
     return total;
 }
@@ -137,13 +156,8 @@ int payoutResults(int player, int dealer) {
 bool runRound() {
     //Player's cards
     cout << "------------- round " << roundCount << " -------------" << endl << endl;
-    cout << "What is your wager? (0 to quit): ";
-    cin >> wager;
+    wager = promptForInt("What is your wager? (0 to quit): ", 0, bankRoll);
     if(wager <= 0) return false;
-    while(wager > bankRoll) {
-        cout << "You don't have that much money.  Bet a lower amount: ";
-        cin >> wager;
-    }
     char hit = 'h';
     int playerTotal = 0;
     int dealerTotal = 0;
@@ -231,13 +245,12 @@ bool runRound() {
     cout << "Current bank roll is : " << bankRoll << endl;
     return true;
 }
-int main(void) {
+int main(int argc, char** argv) {
     srand(time(0));
 
     cout << "Blackjack simulator $0.99" << endl;
     getGameState();
-    cout << "How much money are you starting with? ";
-    cin >> bankRoll;
+    bankRoll = promptForInt("How much money are you starting with? ", 0, 99999999);
     cout << endl;
     deckSize = deckCount * 52;
     int originalDeckSize = deckSize;
