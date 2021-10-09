@@ -6,7 +6,6 @@
 #include <ctime>
 #include <cstdlib>
 #include <limits>
-
 using namespace std;
 const int cardValues[] = {
     0,11,2,3,4,5,6,7,8,9,10,10,10,10,
@@ -18,14 +17,12 @@ const string cardNames[] = {
     "Wild","As","2s","3s","4s","5s","6s","7s","8s","9s","Ts","Js","Qs","Ks",
     "Ad","2d","3d","4d","5d","6d","7d","8d","9d","Td","Jd","Qd","Kd",
     "Ah","2h","3h","4h","5h","6h","7h","8h","9h","Th","Jh","Qh","Kh",
-    "Ac","2c","3c","4c","5c","6c","7c","8c","9c","Tc","Jc","Qc","Kc" };
-int deckCount;
+    "Ac","2c","3c","4c","5c","6c","7c","8c","9c","Tc","Jc","Qc","Kc"
+};
+int deckCount = 1;
 int deckSize;
 int* deckSizeReference = &deckSize;
-int playerCount = 0;
-int playerPosition = 0;
 int bankRoll = 10000;
-int wager = 50;
 int runningCount = 0;
 int roundCount = 1;
 
@@ -48,15 +45,21 @@ int promptForInt(const char* prompt, int min, int max) {
         else return out;
     }
 }
-void getGameState() {
-    // cout << "Enter deck count: ";
-    deckCount = 1;
-    //cin >> deckCount;
-    //cout << "Enter player count: ";
-    //cin >> playerCount;
-    //cout << "Enter player position: ";
-    //cin >> playerPosition;
+#pragma region Preferences
+bool useBets = true;
+bool showCardCount = false;
+void getPreferences() {
+    char input;
+    cout << "Would you like to disable bets (y)? ";
+    cin >> input;
+    if(input == 'y' || input == 'Y') useBets = false;
+    cout << "Would you like to show card count (y)? ";
+    cin >> input;
+    if(input == 'y' || input == 'Y') showCardCount = true;
+    deckCount = promptForInt("Enter deck count: ", 1, 256);
+    cout << "Preferences updated" << endl << endl;
 }
+#pragma endregion
 int runningCounter(int cardID) {
     int temp = cardValues[cardID];
     if(temp >= 2 && temp <= 6) return 1;
@@ -66,7 +69,7 @@ int runningCounter(int cardID) {
 int drawCard() {
     int index = rand() % deckSize;
     int cardID = deck[index];
-    runningCount += runningCounter(cardID);
+    if(showCardCount) runningCount += runningCounter(cardID);
     deckSize--;
     deck[index] = deck[deckSize];
     return cardID;
@@ -100,78 +103,84 @@ int totalHand(int* hand, int count) {
 }
 void generateDeck(int* deck, int count) {
     for(int i = 0; i < count; i++) {
-        deck[i] = (i + 1) % 52;
+        deck[i] = i % 52 + 1;
     }
 }
-int playHand(int* hand, int* handSizeReference) {
+int playHand(int* hand, int* handSizeReference, int* wagerReference) {
     char hit = 'h';
     int total = 0;
-    while(true) {
-        cout << "\n[card count: " << runningCount << "] Hit, stand, or double down? (h s d) ";
-        cin >> hit;
-        if(hit == 's' || hit == 'S') {
-            total = totalHand(hand, *handSizeReference);
-            break;
-        }
-        if(hit == 'd' || hit == 'D') wager *= 2;
-        //Draw card
-        hand[*handSizeReference] = drawCard();
-        (*handSizeReference)++;
-        //Print and count cards
-        total = totalHand(hand, *handSizeReference);
-        cout << "Your cards right now (" << total << "): ";
-        printHand(hand, *handSizeReference);
+    while(hit == 'h' || hit == 'H') {
         cout << endl;
+        if(showCardCount) cout << "[card count: " << runningCount << "] ";
+    promptHit:
+        if(*handSizeReference == 2) cout << "Hit, stand, or double down? (h s d q) ";
+        else cout << "Hit or stand? (h s q) ";
+        cin >> hit;
+        cin.ignore();
+        switch(hit) {
+        case 'q':
+            exit(0);
+        case 's': case 'S':
+            return totalHand(hand, *handSizeReference);
+        case 'd': case 'D':
+            if(*handSizeReference == 2) (*wagerReference) *= 2;
+        case 'h': case 'H':
+            //Draw card
+            hand[*handSizeReference] = drawCard();
+            (*handSizeReference)++;
+            //Print and count cards
+            total = totalHand(hand, *handSizeReference);
+            cout << "Your cards right now (" << total << "): ";
+            printHand(hand, *handSizeReference);
+            cout << endl;
+            break;
+        default:
+            cout << "Please enter a valid response" << endl;
+            goto promptHit;
+        }
         //Busting
         if(total >= 21) break;
-        if(hit == 'd' || hit == 'D') break;
     }
     return total;
 }
-int payoutResults(int player, int dealer) {
+int payoutResults(int player, int dealer, int wager) {
+    char winner = 'p';
     if(player > 21) {
-        bankRoll = bankRoll - wager;
-        cout << "Player busts. Dealer wins" << endl;
-        return -1;
+        cout << "Player busts; " << endl;
+        winner = 'd';
     }
-    if(dealer > 21) {
-        bankRoll = bankRoll + wager;
-        cout << "Dealer busts. Player wins" << endl;
-        return 1;
-    }
-    if(player > dealer) {
-        cout << "Player wins" << endl;
-        bankRoll = bankRoll + wager;
-        return 1;
-    }
-    if(player == dealer) {
+    if(dealer > 21) cout << "Dealer busts; " << endl;
+    if(dealer > player) winner = 'd';
+    else if(player == dealer) {
         cout << "Player pushes" << endl;
         return 0;
     }
+    if(winner == 'p') {
+        cout << "Player wins" << endl;
+        bankRoll += wager;
+        return 1;
+    }
     //Dealer wins
-    bankRoll = bankRoll - wager;
+    bankRoll -= wager;
     cout << "Dealer wins" << endl;
     return -1;
 }
 bool runRound() {
     //Player's cards
     cout << "------------- round " << roundCount << " -------------" << endl << endl;
-    wager = promptForInt("What is your wager? (0 to quit): ", 0, bankRoll);
-    if(wager <= 0) return false;
+    int firstWager = 0, secondWager = 0;
+    if(useBets) firstWager = promptForInt("What is your wager? (0 to quit): ", 0, bankRoll);
+    if(firstWager <= 0 && useBets) return false;
     char hit = 'h';
-    int playerTotal = 0;
-    int dealerTotal = 0;
-    int playerHand[10];
-    int playerHandSize = 2;
+    int playerTotal = 0, dealerTotal = 0;
+    int playerHand[10], dealerCards[10];
+    int playerHandSize = 2, dealerHandSize = 2;
     playerHand[0] = drawCard();
     playerHand[1] = drawCard();
-    //Dealer's cards
-    int dealerCards[10];
-    int dealerHandSize = 2;
     dealerCards[0] = drawCard();
     dealerCards[1] = drawCard();
+    //Uncount dealer's hidden card
     runningCount -= runningCounter(dealerCards[1]);
-    //Print out dealer's card
     cout << "Dealer is showing: " << cardNames[dealerCards[0]] << endl;
     //Print and count cards
     playerTotal = totalHand(playerHand, playerHandSize);
@@ -179,78 +188,72 @@ bool runRound() {
     printHand(playerHand, playerHandSize);
     //Splitting opportunity
     int secondHand[10];
-    int secondHandSize = 0;
-    int secondHandTotal = 0;
-    int secondWager = wager;
-    int firstWager = wager;
+    int secondHandTotal = 22;
     char split = 'n';
     if(cardValues[playerHand[0]] == cardValues[playerHand[1]]) {
-        cout << "\n\nWould you like to split? (y or n): ";
+        cout << "\n\nWould you like to split? (y) ";
         cin >> split;
-        if(split == 'y' || split == 'Y') {
-            playerHandSize--;
-            secondHand[0] = playerHand[1];
-            secondHandSize = 1;
-            cout << "---- Playing first hand ----" << endl;
-            cout << "Current hand (" << cardValues[secondHand[0]] << "): ";
-            printHand(secondHand, secondHandSize);
-            secondHandTotal = playHand(secondHand, &secondHandSize);
-            firstWager = wager;
-            wager = secondWager;
-            cout << "---- Playing second hand ----" << endl;
-            cout << "Current hand (" << cardValues[playerHand[0]] << "): ";
-            printHand(playerHand, playerHandSize);
-            secondWager = wager;
-        }
+    }
+    if(split == 'y' || split == 'Y') {
+        secondHand[0] = playerHand[1];
+
+        cout << "---- Playing first hand ----" << endl;
+        playerHand[1] = drawCard();
+        cout << "Current hand (" << cardValues[playerHand[0]] << "): ";
+        printHand(playerHand, playerHandSize);
+        playerTotal = playHand(playerHand, &playerHandSize, &firstWager);
+
+        cout << "---- Playing second hand ----" << endl;
+        int secondHandSize = 2;
+        secondHand[1] = drawCard();
+        cout << "Current hand (" << cardValues[secondHand[0]] << "): ";
+        printHand(secondHand, secondHandSize);
+        secondHandTotal = playHand(secondHand, &secondHandSize, &secondWager);
     }
     //Natural 21
-    if(playerTotal == 21) {
+    else if(playerTotal == 21) {
         cout << "\nYou hit a natural 21";
-        bankRoll = bankRoll + .5 * wager;
+        bankRoll += .5 * firstWager;
     }
     //Hit loop
-    else {
-        cout << endl;
-        playerTotal = playHand(playerHand, &playerHandSize);
-    }
+    else playerTotal = playHand(playerHand, &playerHandSize, &firstWager);
+    //Dealer hit loop
     dealerTotal = totalHand(dealerCards, dealerHandSize);
     int dealerAces = aceCount(dealerCards, dealerHandSize);
-    while(playerTotal <= 21 && secondHandTotal < 21 && (dealerTotal < 17 || (dealerTotal == 17 && dealerAces != 0))) {
+    while((playerTotal <= 21 || secondHandTotal <= 21) && (dealerTotal < 17 || (dealerTotal == 17 && dealerAces != 0))) {
         //Draw card
         dealerCards[dealerHandSize] = drawCard();
         dealerHandSize++;
-        //Print cards
-        //cout << "Dealer's hand: ";
-        //printHand(dealerCards, dealerHandSize);
         dealerTotal = totalHand(dealerCards, dealerHandSize);
-        //Print total
-        //cout << endl << "Dealer total: " << dealerTotal << endl;
         dealerAces = aceCount(dealerCards, dealerHandSize);
     }
-    cout << endl << "Dealer's hand: ";
+    //Print dealer's hand
+    cout << "\n\nDealer's hand: ";
     printHand(dealerCards, dealerHandSize);
     dealerTotal = totalHand(dealerCards, dealerHandSize);
-    //Print total
     cout << endl << "Dealer total: " << dealerTotal << endl;
     dealerAces = aceCount(dealerCards, dealerHandSize);
+    //Print player's total
     cout << "Player total: " << playerTotal << endl;
-    wager = firstWager;
-    payoutResults(playerTotal, dealerTotal);
+    //Payout
+    payoutResults(playerTotal, dealerTotal, firstWager);
     if(split == 'y' || split == 'Y') {
         cout << "---Second hand payouts---" << endl << "Second hand total: " << secondHandTotal << endl;
-        wager = secondWager;
-        payoutResults(secondHandTotal, dealerTotal);
+        payoutResults(secondHandTotal, dealerTotal, secondWager);
     }
     runningCount += runningCounter(dealerCards[1]);
-    cout << "Current bank roll is : " << bankRoll << endl;
+    if(useBets) cout << "Current bank roll is : " << bankRoll << endl;
     return true;
 }
 int main(int argc, char** argv) {
     srand(time(0));
 
     cout << "Blackjack simulator $0.99" << endl;
-    getGameState();
-    bankRoll = promptForInt("How much money are you starting with? ", 0, 99999999);
+    char preferences;
+    cout << "Would you like to edit preferences [card count=n, deck count=1, use bets=y] (y)? ";
+    cin >> preferences;
+    if(preferences == 'y' || preferences == 'Y') getPreferences();
+    if(useBets) bankRoll = promptForInt("How much money are you starting with? ", 0, 99999999);
     cout << endl;
     deckSize = deckCount * 52;
     int originalDeckSize = deckSize;
@@ -258,7 +261,7 @@ int main(int argc, char** argv) {
     generateDeck(deck, deckSize);
     while(runRound()) {
         roundCount++;
-        if(bankRoll <= 0) {
+        if(bankRoll <= 0 && useBets) {
             cout << "You lose, chump.  You're out of money. The loan shark is comin!" << endl;
             return 0;
         }
