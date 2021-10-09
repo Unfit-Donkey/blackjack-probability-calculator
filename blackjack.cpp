@@ -55,13 +55,13 @@ int drawCard() {
 }
 int aceCount(int* hand, int count) {
     int total = 0;
-    for(int i = 0;i < count;i++) {
+    for(int i = 0; i < count; i++) {
         if(cardValues[hand[i]] == 11) total++;
     }
     return total;
 }
 void printHand(int* hand, int count) {
-    for(int i = 0;i < count;i++) {
+    for(int i = 0; i < count; i++) {
         cout << cardNames[hand[i]];
         if(i != count - 1) cout << ", ";
     }
@@ -69,7 +69,7 @@ void printHand(int* hand, int count) {
 int totalHand(int* hand, int count) {
     int total = 0;
     int aceCount = 0;
-    for(int i = 0;i < count;i++) {
+    for(int i = 0; i < count; i++) {
         total += cardValues[hand[i]];
         if(cardValues[hand[i]] == 11) aceCount++;
     }
@@ -81,17 +81,20 @@ int totalHand(int* hand, int count) {
     return total;
 }
 void generateDeck(int* deck, int count) {
-    for(int i = 0;i < count;i++) {
-        deck[i] = i + 1;
+    for(int i = 0; i < count; i++) {
+        deck[i] = (i + 1) % 52;
     }
 }
 int playHand(int* hand, int* handSizeReference) {
     char hit = 'h';
-    int total;
+    int total = 0;
     while(hit == 'h' || hit == 'H') {
         cout << "\n[card count: " << runningCount << "] Hit, stand, or double down? (h s d) ";
         cin >> hit;
-        if(hit == 's' || hit == 'S') break;
+        if(hit == 's' || hit == 'S') {
+            total = totalHand(hand, *handSizeReference);
+            break;
+        }
         if(hit == 'd' || hit == 'D') wager *= 2;
         //Draw card
         hand[*handSizeReference] = drawCard();
@@ -164,8 +167,10 @@ bool runRound() {
     int secondHand[10];
     int secondHandSize = 0;
     int secondHandTotal = 0;
-    char split;
-    if(playerHand[0] % 13 == playerHand[1] % 13) {
+    int secondWager = wager;
+    int firstWager = wager;
+    char split = 'n';
+    if(cardValues[playerHand[0]] == cardValues[playerHand[1]]) {
         cout << "\n\nWould you like to split? (y or n): ";
         cin >> split;
         if(split == 'y' || split == 'Y') {
@@ -176,9 +181,12 @@ bool runRound() {
             cout << "Current hand (" << cardValues[secondHand[0]] << "): ";
             printHand(secondHand, secondHandSize);
             secondHandTotal = playHand(secondHand, &secondHandSize);
+            firstWager = wager;
+            wager = secondWager;
             cout << "---- Playing second hand ----" << endl;
             cout << "Current hand (" << cardValues[playerHand[0]] << "): ";
             printHand(playerHand, playerHandSize);
+            secondWager = wager;
         }
     }
     //Natural 21
@@ -212,9 +220,11 @@ bool runRound() {
     cout << endl << "Dealer total: " << dealerTotal << endl;
     dealerAces = aceCount(dealerCards, dealerHandSize);
     cout << "Player total: " << playerTotal << endl;
+    wager = firstWager;
     payoutResults(playerTotal, dealerTotal);
     if(split == 'y' || split == 'Y') {
         cout << "---Second hand payouts---" << endl << "Second hand total: " << secondHandTotal << endl;
+        wager = secondWager;
         payoutResults(secondHandTotal, dealerTotal);
     }
     runningCount += runningCounter(dealerCards[1]);
