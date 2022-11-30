@@ -44,7 +44,7 @@ void getPreferences() {
     deckCount = promptForInt("Enter deck count: ", 1, 256);
     cout << "Preferences updated" << endl << endl;
 }
-int playHand(Deck hand, int& wager) {
+int playHand(Deck& hand, int& wager) {
     char hit = 'h';
     while(hit == 'h' || hit == 'H') {
         cout << endl;
